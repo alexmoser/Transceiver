@@ -107,7 +107,7 @@ static RF_Handle rfHandle;
 
 /* TX variables */
 static uint8_t txPacket[TX_PAYLOAD_LENGTH];
-static uint16_t seqNumber;
+//static uint16_t seqNumber;
 
 /* RX variables */
 
@@ -116,9 +116,9 @@ static dataQueue_t dataQueue;
 static rfc_dataEntryGeneral_t* currentDataEntry;
 static uint8_t rxPacketLength;
 static uint8_t* rxPacketDataPointer;
-
 static uint8_t rxPacket[RX_MAX_LENGTH + NUM_APPENDED_BYTES - 1]; /* The length byte is stored in a separate variable */
 
+static bool received = false;
 
 
 /***** Function definitions *****/
@@ -177,17 +177,36 @@ static void txTaskFunction(UArg arg0, UArg arg1)
         PIN_setOutputValue(pinHandle, Board_LED1,!PIN_getOutputValue(Board_LED1));
 
         /* Create txPacket with incrementing sequence number */
-        txPacket[0] = (uint8_t)(seqNumber >> 8);
-        txPacket[1] = (uint8_t)(seqNumber++);
-        txPacket[2] = 'a';
-        txPacket[3] = 'a';
+//        txPacket[0] = (uint8_t)(seqNumber >> 8);
+//        txPacket[1] = (uint8_t)(seqNumber++);
+        if (!received) {
+            /* first transmission, set seqno to 0 */
+            txPacket[0] = 0;
+            txPacket[1] = 0;
+            txPacket[2] = 'a';
+            txPacket[3] = 'b';
+        }
+        else {
+            /* send back received packet, with increased seqno */
+            for (i=0; i<TX_PAYLOAD_LENGTH; i++) {
+                txPacket[i] = rxPacket[i];
+            }
+            /* increment seqno of received packet */
+            if (txPacket[1] == 0xFF) {
+                txPacket[0]++;
+                txPacket[1] = 0;
+            }
+            else {
+                txPacket[1]++;
+            }
+        }
 
         if (DEBUG) {
-            System_printf("Sending data: ");
+            System_printf("Sending data: \t");
             for (i=0; i<TX_PAYLOAD_LENGTH; i++) {
-                System_printf("%u", txPacket[i]);
+                System_printf(" %02x", txPacket[i]);
             }
-            System_printf("\n");
+            System_printf(" (len = %u)\n", TX_PAYLOAD_LENGTH);
             System_flush();
         }
 
@@ -228,7 +247,6 @@ static void txTaskFunction(UArg arg0, UArg arg1)
         uint8_t timeout = RX_MIN_TIMEOUT + (rand() % (RX_MAX_TIMEOUT-RX_MIN_TIMEOUT));
         RF_cmdPropRx.endTrigger.triggerType = TRIG_ABSTIME;
         RF_cmdPropRx.endTime = RF_getCurrentTime() + (uint32_t)(timeout*8000000*0.5f);
-//        if (DEBUG) System_printf("timeout set to: %d s\n", timeout);
 
         /* Start receiving */
         RF_CmdHandle rx_cmd = RF_postCmd(rfHandle, (RF_Op*)&RF_cmdPropRx, RF_PriorityNormal, NULL, 0);
@@ -244,6 +262,8 @@ static void txTaskFunction(UArg arg0, UArg arg1)
                     /* Make LED blink when data is received */
                     PIN_setOutputValue(pinHandle, Board_LED0,!PIN_getOutputValue(Board_LED0));
 
+                    received = true;
+
                     /* Handle the packet data, located at &currentDataEntry->data:
                      * - Length is the first byte with the current configuration
                      * - Data starts from the second byte */
@@ -255,12 +275,14 @@ static void txTaskFunction(UArg arg0, UArg arg1)
                     memcpy(rxPacket, rxPacketDataPointer, (rxPacketLength + 1));
 
                     /* Print received data on the console */
-                    System_printf("Data received: ", rxPacketLength);
-                    for (i=0; i<rxPacketLength; i++) {
-                        System_printf("%u", rxPacketDataPointer[i]);
+                    if (DEBUG) {
+                        System_printf("Data received: \t");
+                        for (i=0; i<rxPacketLength; i++) {
+                            System_printf(" %02x", rxPacket[i]);
+                        }
+                        System_printf(" (len = %u)\n", rxPacketLength);
+                        System_flush();
                     }
-                    System_printf(" (len = %u)\n", rxPacketLength);
-                    System_flush();
 
                     PIN_setOutputValue(pinHandle, Board_LED0,!PIN_getOutputValue(Board_LED0));
                 }
