@@ -107,7 +107,7 @@ static RF_Handle rfHandle;
 
 /* TX variables */
 static uint8_t txPacket[TX_PAYLOAD_LENGTH];
-//static uint16_t seqNumber;
+static uint16_t seqNumber;
 
 /* RX variables */
 
@@ -177,27 +177,27 @@ static void txTaskFunction(UArg arg0, UArg arg1)
         PIN_setOutputValue(pinHandle, Board_LED1,!PIN_getOutputValue(Board_LED1));
 
         /* Create txPacket with incrementing sequence number */
-//        txPacket[0] = (uint8_t)(seqNumber >> 8);
-//        txPacket[1] = (uint8_t)(seqNumber++);
+        txPacket[0] = (uint8_t)(seqNumber >> 8);
+        txPacket[1] = (uint8_t)(seqNumber++);
         if (!received) {
-            /* first transmission, set seqno to 0 */
-            txPacket[0] = 0;
-            txPacket[1] = 0;
-            txPacket[2] = 'a';
-            txPacket[3] = 'b';
+            /* first transmission, set payload data to 0 */
+//            txPacket[0] = 0;
+//            txPacket[1] = 0;
+            txPacket[2] = 0;
+            txPacket[3] = 0;
         }
         else {
-            /* send back received packet, with increased seqno */
-            for (i=0; i<TX_PAYLOAD_LENGTH; i++) {
+            /* send back received packet, with increased payload value */
+            for (i=2; i<TX_PAYLOAD_LENGTH; i++) {
                 txPacket[i] = rxPacket[i];
             }
-            /* increment seqno of received packet */
-            if (txPacket[1] == 0xFF) {
-                txPacket[0]++;
-                txPacket[1] = 0;
+            /* increment value of received packet */
+            if (txPacket[3] == 0xFF) {
+                txPacket[2]++;
+                txPacket[3] = 0;
             }
             else {
-                txPacket[1]++;
+                txPacket[3]++;
             }
         }
 
