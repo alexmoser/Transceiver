@@ -160,7 +160,8 @@ static void txTaskFunction(UArg arg0, UArg arg1)
     RF_cmdPropRx.startTime = 0;
 
     /* Request access to the radio */
-    rfHandle = RF_open(&rfObject, &RF_prop, (RF_RadioSetup*)&RF_cmdPropRadioDivSetup, &rfParams);
+    rfHandle = RF_open(&rfObject, &RF_prop,
+                      (RF_RadioSetup*)&RF_cmdPropRadioDivSetup, &rfParams);
 
     /* Set the frequency */
     RF_cmdFs.frequency = FREQUENCY;
@@ -174,7 +175,8 @@ static void txTaskFunction(UArg arg0, UArg arg1)
     {
         /****** Go into TX mode ******************************/
         /* Toggle LED0 to indicate begin of TX */
-        PIN_setOutputValue(pinHandle, Board_LED1,!PIN_getOutputValue(Board_LED1));
+        PIN_setOutputValue(pinHandle, Board_LED1,
+                          !PIN_getOutputValue(Board_LED1));
 
         /* Create txPacket with incrementing sequence number */
         txPacket[0] = (uint8_t)(seqNumber >> 8);
@@ -211,10 +213,12 @@ static void txTaskFunction(UArg arg0, UArg arg1)
         }
 
         /* Send txPacket */
-        RF_CmdHandle tx_cmd = RF_postCmd(rfHandle, (RF_Op*)&RF_cmdPropTx, RF_PriorityNormal, NULL, 0);
+        RF_CmdHandle tx_cmd = RF_postCmd(rfHandle, (RF_Op*)&RF_cmdPropTx,
+                                        RF_PriorityNormal, NULL, 0);
 
         /* Wait for posted command to complete */
-        RF_EventMask result = RF_pendCmd(rfHandle, tx_cmd, (RF_EventLastCmdDone | RF_EventCmdError));
+        RF_EventMask result = RF_pendCmd(rfHandle, tx_cmd,
+                                      (RF_EventLastCmdDone | RF_EventCmdError));
 
         if (!(result & RF_EventLastCmdDone))
         {
@@ -231,7 +235,8 @@ static void txTaskFunction(UArg arg0, UArg arg1)
             Task_sleep(1000000 / Clock_tickPeriod);
 
         /* Toggle LED0 to indicate end of TX */
-        PIN_setOutputValue(pinHandle, Board_LED1,!PIN_getOutputValue(Board_LED1));
+        PIN_setOutputValue(pinHandle, Board_LED1,
+                          !PIN_getOutputValue(Board_LED1));
 
         /****** Go into RX mode ******************************/
         /* Toggle LED1 to indicate begin of RX */
@@ -246,10 +251,12 @@ static void txTaskFunction(UArg arg0, UArg arg1)
         /* Modify CMD_PROP_RX command for application needs */
         uint8_t timeout = RX_MIN_TIMEOUT + (rand() % (RX_MAX_TIMEOUT-RX_MIN_TIMEOUT));
         RF_cmdPropRx.endTrigger.triggerType = TRIG_ABSTIME;
-        RF_cmdPropRx.endTime = RF_getCurrentTime() + (uint32_t)(timeout*8000000*0.5f);
+        RF_cmdPropRx.endTime = RF_getCurrentTime()
+                                + (uint32_t)(timeout*8000000*0.5f);
 
         /* Start receiving */
-        RF_CmdHandle rx_cmd = RF_postCmd(rfHandle, (RF_Op*)&RF_cmdPropRx, RF_PriorityNormal, NULL, 0);
+        RF_CmdHandle rx_cmd = RF_postCmd(rfHandle, (RF_Op*)&RF_cmdPropRx,
+                                        RF_PriorityNormal, NULL, 0);
 
         /* Wait for posted command to complete */
         result = RF_pendCmd(rfHandle, rx_cmd, (RF_EventLastCmdDone | RF_EventCmdError));
